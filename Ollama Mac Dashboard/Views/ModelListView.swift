@@ -8,10 +8,11 @@
 import SwiftUI
 
 struct ModelListView: View {
-    @StateObject private var viewModel = ModelListViewModel()
+    @EnvironmentObject private var viewModel: ModelListViewModel
     @State private var showingPullSheet = false
     @State private var modelToPull = ""
     @Binding var selectedModel: OllamaModel?
+    @State private var isRefreshing = false
 
     var body: some View {
         VStack {
@@ -42,26 +43,30 @@ struct ModelListView: View {
                                 .foregroundColor(.secondary)
                         } else {
                             ForEach(viewModel.models) { model in
-                                ModelRow(model: model, isRunning: viewModel.isModelRunning(name: model.name))
-                                    .contentShape(Rectangle())
-                                    .onTapGesture {
-                                        selectedModel = model
-                                    }
-                                    .contextMenu {
-                                        if viewModel.isModelRunning(name: model.name) {
-                                            Button("Unload Model") {
-                                                viewModel.unloadModel(name: model.name)
-                                            }
-                                        } else {
-                                            Button("Load Model") {
-                                                viewModel.loadModel(name: model.name)
-                                            }
+                                // Use Button instead of onTapGesture for better responsiveness
+                                Button(action: {
+                                    // Immediately update selection for better responsiveness
+                                    selectedModel = model
+                                }) {
+                                    ModelRow(model: model, isRunning: viewModel.isModelRunning(name: model.name))
+                                        .contentShape(Rectangle())
+                                }
+                                .buttonStyle(PlainButtonStyle()) // Use plain style to avoid button styling
+                                .contextMenu {
+                                    if viewModel.isModelRunning(name: model.name) {
+                                        Button("Unload Model") {
+                                            viewModel.unloadModel(name: model.name)
                                         }
+                                    } else {
+                                        Button("Load Model") {
+                                            viewModel.loadModel(name: model.name)
+                                        }
+                                    }
 
-                                        Button("Delete Model", role: .destructive) {
-                                            viewModel.deleteModel(name: model.name)
-                                        }
+                                    Button("Delete Model", role: .destructive) {
+                                        viewModel.deleteModel(name: model.name)
                                     }
+                                }
                             }
                         }
                     }
@@ -129,10 +134,23 @@ struct ModelListView: View {
                     })
                 }
                 .onAppear {
-                    viewModel.checkOllamaConnection()
+                    // Only load data if it hasn't been loaded yet
+                    if viewModel.models.isEmpty {
+                        viewModel.checkOllamaConnection()
+                    } else {
+                        // Just refresh running models which is a lighter operation
+                        viewModel.loadRunningModels()
+                    }
                 }
                 .refreshable {
-                    viewModel.checkOllamaConnection()
+                    // Set refreshing state to show visual feedback
+                    isRefreshing = true
+
+                    // Use a Task to handle async operations
+                    await viewModel.refreshAllData()
+
+                    // Reset refreshing state
+                    isRefreshing = false
                 }
             }
         }
@@ -149,15 +167,23 @@ struct ModelListView: View {
     }
 }
 
-struct ModelRow: View {
+// Make ModelRow more efficient with Equatable
+struct ModelRow: View, Equatable {
     let model: OllamaModel
     let isRunning: Bool
+
+    // Add Equatable conformance to avoid unnecessary redraws
+    static func == (lhs: ModelRow, rhs: ModelRow) -> Bool {
+        return lhs.model.id == rhs.model.id &&
+               lhs.isRunning == rhs.isRunning
+    }
 
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text(model.name)
                     .font(.headline)
+                    .lineLimit(1) // Limit to one line for better performance
 
                 HStack {
                     Text(model.details.parameterSize)
@@ -178,6 +204,7 @@ struct ModelRow: View {
                 Text("Family: \(model.details.family)")
                     .font(.caption)
                     .foregroundColor(.secondary)
+                    .lineLimit(1) // Limit to one line for better performance
             }
 
             Spacer()

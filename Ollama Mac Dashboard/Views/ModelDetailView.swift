@@ -9,7 +9,7 @@ import SwiftUI
 
 struct ModelDetailView: View {
     let model: OllamaModel
-    @StateObject private var viewModel = ModelListViewModel()
+    @EnvironmentObject private var viewModel: ModelListViewModel
     @State private var showingDeleteConfirmation = false
 
     var body: some View {

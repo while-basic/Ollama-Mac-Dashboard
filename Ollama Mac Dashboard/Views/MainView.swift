@@ -9,7 +9,7 @@ import SwiftUI
 
 struct MainView: View {
     @State private var selectedModel: OllamaModel?
-    @StateObject private var viewModel = ModelListViewModel()
+    @EnvironmentObject private var viewModel: ModelListViewModel
 
     var body: some View {
         NavigationSplitView {
@@ -26,9 +26,16 @@ struct MainView: View {
                 )
             }
         }
+        .onAppear {
+            // Initial data load when the app starts
+            if viewModel.models.isEmpty {
+                viewModel.checkOllamaConnection()
+            }
+        }
     }
 }
 
 #Preview {
     MainView()
+        .environmentObject(ModelListViewModel())
 }

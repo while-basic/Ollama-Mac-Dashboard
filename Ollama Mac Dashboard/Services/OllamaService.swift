@@ -108,9 +108,47 @@ class OllamaService: ObservableObject {
     func listRunningModels() async throws -> [RunningModel] {
         let url = URL(string: "\(baseURL)/ps")!
 
-        let (data, _) = try await URLSession.shared.data(from: url)
-        let modelList = try JSONDecoder().decode(RunningModelList.self, from: data)
-        return modelList.models
+        print("Fetching running models from: \(url)")
+
+        // Create a custom URL session configuration
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 10 // 10 second timeout
+        let session = URLSession(configuration: config)
+
+        do {
+            let (data, response) = try await session.data(from: url)
+
+            // Print response for debugging
+            if let httpResponse = response as? HTTPURLResponse {
+                print("Response status code: \(httpResponse.statusCode)")
+
+                if httpResponse.statusCode != 200 {
+                    throw OllamaError.apiError("Server returned status code \(httpResponse.statusCode)")
+                }
+            }
+
+            // Print raw data for debugging
+            if let jsonString = String(data: data, encoding: .utf8) {
+                print("Raw JSON response: \(jsonString)")
+            }
+
+            let decoder = JSONDecoder()
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSSZZZZZ"
+            decoder.dateDecodingStrategy = .formatted(dateFormatter)
+
+            let modelList = try decoder.decode(RunningModelList.self, from: data)
+            print("Decoded \(modelList.models.count) running models")
+            return modelList.models
+        } catch let error as NSError {
+            print("Error fetching running models: \(error.localizedDescription)")
+            print("Error domain: \(error.domain), code: \(error.code)")
+            if let underlyingError = error.userInfo[NSUnderlyingErrorKey] as? NSError {
+                print("Underlying error: \(underlyingError.localizedDescription)")
+                print("Underlying domain: \(underlyingError.domain), code: \(underlyingError.code)")
+            }
+            throw OllamaError.decodingError(error)
+        }
     }
 
     func pullModel(name: String) -> AnyPublisher<String, OllamaError> {

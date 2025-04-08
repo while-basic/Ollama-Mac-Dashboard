@@ -10,6 +10,9 @@ import SwiftData
 
 @main
 struct Ollama_Mac_DashboardApp: App {
+    // Create a shared view model instance
+    @StateObject private var sharedViewModel = ModelListViewModel()
+
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             ChatMessage.self,
@@ -27,6 +30,7 @@ struct Ollama_Mac_DashboardApp: App {
         WindowGroup {
             MainView()
                 .frame(minWidth: 900, minHeight: 600)
+                .environmentObject(sharedViewModel) // Provide the shared view model to all views
         }
         .modelContainer(sharedModelContainer)
         .windowStyle(.titleBar)
