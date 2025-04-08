@@ -49,11 +49,7 @@ struct MainView: View {
                     ModelListView(selectedModel: $selectedModel)
                 }
             case .chat:
-                ContentUnavailableView(
-                    "Chat Coming Soon",
-                    systemImage: "bubble.left.and.bubble.right",
-                    description: Text("Chat functionality will be available in a future update.")
-                )
+                EnhancedChatView()
             case .settings:
                 ContentUnavailableView(
                     "Settings Coming Soon",

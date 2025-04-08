@@ -205,15 +205,21 @@ class OllamaService: ObservableObject {
 
     // MARK: - Chat
 
-    func chat(model: String, messages: [ChatRequest.Message]) async throws -> ChatResponse {
+    func chat(model: String, messages: [ChatRequest.Message], options: [String: String]? = nil) async throws -> ChatResponse {
         let url = URL(string: "\(baseURL)/chat")!
 
-        let body: [String: Any] = [
+        var body: [String: Any] = [
             "model": model,
             "messages": messages.map { ["role": $0.role, "content": $0.content] },
-            "stream": false,
-            "options": [String: String]()
+            "stream": false
         ]
+
+        // Add options if provided
+        if let options = options, !options.isEmpty {
+            body["options"] = options
+        } else {
+            body["options"] = [String: String]()
+        }
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
