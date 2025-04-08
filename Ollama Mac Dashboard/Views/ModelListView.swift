@@ -13,6 +13,7 @@ struct ModelListView: View {
     @State private var modelToPull = ""
     @Binding var selectedModel: OllamaModel?
     @State private var isRefreshing = false
+    @State private var searchText = ""
 
     var body: some View {
         VStack {

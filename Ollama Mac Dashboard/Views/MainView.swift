@@ -9,20 +9,56 @@ import SwiftUI
 
 struct MainView: View {
     @State private var selectedModel: OllamaModel?
+    @State private var selectedSidebarItem: SidebarItem = .dashboard
     @EnvironmentObject private var viewModel: ModelListViewModel
+
+    enum SidebarItem: String, CaseIterable, Identifiable {
+        case dashboard = "Dashboard"
+        case models = "Models"
+        case chat = "Chat"
+        case settings = "Settings"
+
+        var id: String { self.rawValue }
+
+        var icon: String {
+            switch self {
+            case .dashboard: return "gauge"
+            case .models: return "cube.stack"
+            case .chat: return "bubble.left.and.bubble.right"
+            case .settings: return "gear"
+            }
+        }
+    }
 
     var body: some View {
         NavigationSplitView {
-            ModelListView(selectedModel: $selectedModel)
-                .navigationSplitViewColumnWidth(min: 250, ideal: 300)
+            List(SidebarItem.allCases, selection: $selectedSidebarItem) { item in
+                NavigationLink(value: item) {
+                    Label(item.rawValue, systemImage: item.icon)
+                }
+            }
+            .navigationTitle("Ollama")
+            .listStyle(SidebarListStyle())
+            .frame(minWidth: 200)
         } detail: {
-            if let selectedModel = selectedModel {
-                ModelDetailView(model: selectedModel)
-            } else {
+            switch selectedSidebarItem {
+            case .dashboard:
+                DashboardView()
+            case .models:
+                NavigationStack {
+                    ModelListView(selectedModel: $selectedModel)
+                }
+            case .chat:
                 ContentUnavailableView(
-                    "Select a Model",
-                    systemImage: "cube.transparent",
-                    description: Text("Choose a model from the sidebar to view details and interact with it.")
+                    "Chat Coming Soon",
+                    systemImage: "bubble.left.and.bubble.right",
+                    description: Text("Chat functionality will be available in a future update.")
+                )
+            case .settings:
+                ContentUnavailableView(
+                    "Settings Coming Soon",
+                    systemImage: "gear",
+                    description: Text("Settings will be available in a future update.")
                 )
             }
         }
